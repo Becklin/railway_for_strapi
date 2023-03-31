@@ -16,14 +16,6 @@ module.exports = createCoreRouter("api::attraction.attraction", {
     //     policies: [],
     //   },
     // },
-    {
-      method: "GET",
-      path: "/attractions/me",
-      handler: "attractions.me",
-      config: {
-        policies: [],
-      },
-    },
     // {
     //   method: "GET",
     //   path: "/attractions/count",

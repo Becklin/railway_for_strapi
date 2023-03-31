@@ -26,45 +26,71 @@ module.exports = createCoreController(
 
     // my custom controller
     async create(ctx) {
-      let entity;
+      const { id } = ctx.state.user; //ctx.state.user contains the current authenticated user
+      const response = await super.create(ctx);
+      const updatedResponse = await strapi.entityService.update(
+        "api::attraction.attraction",
+        response.data.id,
+        { data: { user: id } }
+      );
 
-      if (ctx.is("multipart")) {
-        const { data, files } = parseMultipartData(ctx);
-        data.user = ctx.state.user.id;
-        entity = await strapi.services.attractions.create(data, { files });
-      } else {
-        ctx.request.body.user = ctx.state.user.id;
-        entity = await strapi.services.attractions.create(ctx.request.body);
-      }
-      return sanitizeEntity(entity, { model: strapi.models.attractions });
+      return updatedResponse;
+
+      //   let entity;
+
+      //   if (ctx.is("multipart")) {
+      //     const { data, files } = parseMultipartData(ctx);
+      //     data.user = ctx.state.user.id;
+      //     entity = await strapi.services.attractions.create(data, { files });
+      //   } else {
+      //     ctx.request.body.user = ctx.state.user.id;
+      //     entity = await strapi.services.attractions.create(ctx.request.body);
+      //   }
+      //   return sanitizeEntity(entity, { model: strapi.models.attractions });
     },
     async update(ctx) {
-      const { id } = ctx.params;
-
-      let entity;
-
-      const [attractions] = await strapi.services.attractions.find({
-        id: ctx.params.id,
-        "user.id": ctx.state.user.id,
-      });
-
-      if (!attractions) {
-        return ctx.unauthorized(`You can't update this entry`);
-      }
-
-      if (ctx.is("multipart")) {
-        const { data, files } = parseMultipartData(ctx);
-        entity = await strapi.services.attractions.update({ id }, data, {
-          files,
-        });
+      var { id } = ctx.state.user;
+      var [attraction] = await strapi.entityService.findMany(
+        "api::attraction.attraction",
+        {
+          filters: {
+            id: ctx.request.params.id,
+            user: id,
+          },
+        }
+      );
+      if (attraction) {
+        const response = await super.update(ctx);
+        return response;
       } else {
-        entity = await strapi.services.attractions.update(
-          { id },
-          ctx.request.body
-        );
+        return ctx.unauthorized();
       }
+      //   const { id } = ctx.params;
 
-      return sanitizeEntity(entity, { model: strapi.models.attractions });
+      //   let entity;
+
+      //   const [attractions] = await strapi.services.attractions.find({
+      //     id: ctx.params.id,
+      //     "user.id": ctx.state.user.id,
+      //   });
+
+      //   if (!attractions) {
+      //     return ctx.unauthorized(`You can't update this entry`);
+      //   }
+
+      //   if (ctx.is("multipart")) {
+      //     const { data, files } = parseMultipartData(ctx);
+      //     entity = await strapi.services.attractions.update({ id }, data, {
+      //       files,
+      //     });
+      //   } else {
+      //     entity = await strapi.services.attractions.update(
+      //       { id },
+      //       ctx.request.body
+      //     );
+      //   }
+
+      //   return sanitizeEntity(entity, { model: strapi.models.attractions });
     },
     async delete(ctx) {
       const { id } = ctx.params;
@@ -80,21 +106,41 @@ module.exports = createCoreController(
     },
     // get loggin as users
     async me(ctx) {
-      console.log("ctx", ctx);
       const user = ctx.state.user;
-      console.log("user", user);
 
       if (!user) {
         return ctx.badRequest(null, [
           { messages: [{ id: "No authorization header was found" }] },
         ]);
       }
-      console.log("景點", strapi.services.attractions);
-      const data = await strapi.services.attractions.find({ user: user.id });
+      const data = await strapi.entityService.findMany(
+        "api::attraction.attraction",
+        {
+          //   populate: "image",
+          filters: {
+            user: {
+              id: user.id,
+            },
+          },
+        }
+      );
       if (!data) {
         return ctx.notFound();
       }
-      return sanitizeEntity(data, { model: strapi.models.attractions });
+
+      const sanitizedEvents = await this.sanitizeOutput(data, ctx);
+      return this.transformResponse(sanitizedEvents);
+    },
+    async getSlug(ctx) {
+      const { slug } = ctx.params;
+      const entity = await strapi.db
+        .query("api::attraction.attraction")
+        .findOne({
+          where: { slug },
+        });
+
+      const sanitizeEntity = await this.sanitizeOutput(entity);
+      return this.transformResponse(sanitizeEntity);
     },
   })
 );
