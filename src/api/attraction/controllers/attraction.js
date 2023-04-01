@@ -70,7 +70,7 @@ module.exports = createCoreController(
       const data = await strapi.entityService.findMany(
         "api::attraction.attraction",
         {
-          //   populate: "image",
+          populate: "image",
           filters: {
             user: {
               id: user.id,
