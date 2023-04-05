@@ -1,5 +1,4 @@
 "use strict";
-const { parseMultipartData, sanitizeEntity } = require("@strapi/utils");
 
 /**
  * attraction controller
@@ -13,11 +12,12 @@ module.exports = createCoreController(
     // my custom controller
     async create(ctx) {
       const { id } = ctx.state.user; //ctx.state.user contains the current authenticated user
+      console.log("ctx", ctx);
       const response = await super.create(ctx);
       const updatedResponse = await strapi.entityService.update(
         "api::attraction.attraction",
         response.data.id,
-        { data: { user: id } }
+        { data: { user: id } } // the authenticated User is automatically set as author of the article.
       );
 
       return updatedResponse;
@@ -33,6 +33,7 @@ module.exports = createCoreController(
           },
         }
       );
+
       if (attraction) {
         const response = await super.update(ctx);
         return response;
